@@ -1,1 +1,97 @@
-Self Sign On Certificate ------------------------- Create a folder in Root -> # cd /root # mkdir ssl # cd ssl # mkdir scripts # cd scripts Go inside scripts folder & create below scripts -> # vi rootCA.sh ------------------------- #!/usr/bin/env bash mkdir ~/ssl/ openssl genrsa -des3 -out ~/ssl/rootCA.key 2048 openssl req -x509 -new -nodes -key ~/ssl/rootCA.key -sha256 -days 1024 -out ~/ssl/rootCA.pem -------------------------- # vi selfsign.sh ------------------------- #!/usr/bin/env bash openssl req -new -sha256 -nodes -out server.csr -newkey rsa:2048 -keyout server.key -config <( cat server.csr.cnf ) openssl x509 -req -in server.csr -CA ~/ssl/rootCA.pem -CAkey ~/ssl/rootCA.key -CAcreateserial -out server.crt -days 500 -sha256 -extfile v3.ext # vi server.csr.cnf ------------------------- [req] default_bits = 2048 prompt = no default_md = sha256 distinguished_name = dn [dn] C=NL ST=South Holland L=Delft City Hall O=Inter-Ikea BV System OU=Monitoring Service emailAddress=ITMonitoring2ndLine@inter.ikea.com CN =azvmsplhftst01.inter-ikea.com --------------------------- # vi v3.ext -------------------------- authorityKeyIdentifier=keyid,issuer basicConstraints=CA:FALSE keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment subjectAltName = @alt_names [alt_names] DNS.1 = azvmsplhftst01.inter-ikea.com IP.1 = 10.103.39.42 ---------------------------------- Remove the password from server.key file -> # openssl rsa -in server.key -out server.key Change name server.crt to server.pem -> # mv server.crt server.pem ### Create a folder "mycerts" # mkdir /opt/splunk/etc/auth/mycerts ### Move server.pem & server.key to mycerts folder -->> #cd /root/ssl #mv server.key server.pem /opt/splunk/etc/auth/mycerts ###Change the permission root to Splunk User --> #chown -R splunk:splunk server.* #### Update web.conf with below stanza [settings] enableSplunkWebSSL = true privKeyPath = /opt/splunk/etc/auth/mycerts/server.key serverCert = /opt/splunk/etc/auth/mycerts/server.pem startwebserver = 1 httpport = 8000 ### Using WinSCP export rootCA.pem file & update in System trusted certificate - #### Open Chrome > setting > security > Manage Certificate > Import
+Self Sign On Certificate 
+-------------------------
+ 
+Create a folder in Root ->
+ 
+# cd /root
+# mkdir ssl
+# cd ssl
+# mkdir scripts
+# cd scripts
+ 
+ 
+Go inside scripts folder & create below scripts ->
+ 
+ 
+# vi rootCA.sh
+-------------------------
+#!/usr/bin/env bash
+mkdir ~/ssl/
+openssl genrsa -des3 -out ~/ssl/rootCA.key 2048
+openssl req -x509 -new -nodes -key ~/ssl/rootCA.key -sha256 -days 1024 -out ~/ssl/rootCA.pem
+--------------------------
+ 
+# vi selfsign.sh
+-------------------------
+#!/usr/bin/env bash
+openssl req -new -sha256 -nodes -out server.csr -newkey rsa:2048 -keyout server.key -config <( cat server.csr.cnf )
+openssl x509 -req -in server.csr -CA ~/ssl/rootCA.pem -CAkey ~/ssl/rootCA.key -CAcreateserial -out server.crt -days 500 -sha256 -extfile v3.ext
+ 
+ 
+# vi server.csr.cnf
+-------------------------
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+ 
+[dn]
+C=NL
+ST=South Holland
+L=Delft City Hall
+O=Inter-Ikea BV System
+OU=Monitoring Service
+emailAddress=ITMonitoring2ndLine@inter.ikea.com
+CN =azvmsplhftst01.inter-ikea.com
+---------------------------
+ 
+# vi v3.ext
+--------------------------
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+ 
+[alt_names]
+DNS.1 = azvmsplhftst01.inter-ikea.com
+IP.1 = 10.103.39.42
+ 
+----------------------------------
+ 
+ 
+Remove the password from server.key file ->
+ 
+# openssl rsa -in server.key -out server.key
+ 
+Change name server.crt to server.pem ->
+ 
+# mv server.crt server.pem
+ 
+ 
+### Create a folder "mycerts"
+ 
+# mkdir /opt/splunk/etc/auth/mycerts
+ 
+ 
+### Move server.pem & server.key to mycerts folder -->>
+ 
+#cd /root/ssl
+#mv server.key server.pem /opt/splunk/etc/auth/mycerts
+ 
+###Change the permission root to Splunk User -->
+ 
+#chown -R splunk:splunk server.*
+ 
+#### Update web.conf with below stanza
+ 
+[settings]
+enableSplunkWebSSL = true
+privKeyPath = /opt/splunk/etc/auth/mycerts/server.key
+serverCert = /opt/splunk/etc/auth/mycerts/server.pem
+startwebserver = 1
+httpport = 8000
+ 
+ 
+###  Using WinSCP export rootCA.pem file & update in System trusted certificate -  ####
+Open Chrome > setting > security > Manage Certificate > Import
